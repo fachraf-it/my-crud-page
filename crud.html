@@ -96,11 +96,19 @@
     <button onclick="logout()">Logout</button>
   </div>
   <h1>CRUD Page</h1>
+
+
   <div class="form-container">
     <input type="text" id="name" placeholder="Name" />
     <input type="email" id="email" placeholder="Email" />
     <button onclick="addData()">Add</button>
   </div>
+
+ 
+  <div class="form-container">
+    <input type="text" id="search" placeholder="Search by name or email..." onkeyup="searchData()" />
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -112,17 +120,19 @@
     <tbody id="data-table"></tbody>
   </table>
   <div class="pagination" id="pagination"></div>
+
   <script>
     const dataTable = document.getElementById("data-table");
     const paginationDiv = document.getElementById("pagination");
     let data = JSON.parse(localStorage.getItem("data")) || [];
+    let filteredData = [...data];
     let currentPage = 1;
     const perPage = 5;
 
     function renderTable() {
       dataTable.innerHTML = "";
       const start = (currentPage - 1) * perPage;
-      const pageData = data.slice(start, start + perPage);
+      const pageData = filteredData.slice(start, start + perPage);
       pageData.forEach((item, index) => {
         dataTable.innerHTML += `
           <tr>
@@ -139,7 +149,7 @@
     }
 
     function renderPagination() {
-      const totalPages = Math.ceil(data.length / perPage);
+      const totalPages = Math.ceil(filteredData.length / perPage);
       paginationDiv.innerHTML = `
         <button onclick="prevPage()" ${currentPage === 1 ? "disabled" : ""}>Prev</button>
         <span>Page ${currentPage} of ${totalPages || 1}</span>
@@ -155,7 +165,7 @@
     }
 
     function nextPage() {
-      const totalPages = Math.ceil(data.length / perPage);
+      const totalPages = Math.ceil(filteredData.length / perPage);
       if (currentPage < totalPages) {
         currentPage++;
         renderTable();
@@ -163,11 +173,12 @@
     }
 
     function addData() {
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
       if (name && email) {
         data.push({ name, email });
         localStorage.setItem("data", JSON.stringify(data));
+        filteredData = [...data];
         document.getElementById("name").value = "";
         document.getElementById("email").value = "";
         renderTable();
@@ -175,24 +186,39 @@
     }
 
     function editData(index) {
-      const name = prompt("Enter new name:", data[index].name);
-      const email = prompt("Enter new email:", data[index].email);
+      const name = prompt("Enter new name:", filteredData[index].name);
+      const email = prompt("Enter new email:", filteredData[index].email);
       if (name && email) {
-        data[index] = { name, email };
+        
+        const originalIndex = data.findIndex(item => item === filteredData[index]);
+        data[originalIndex] = { name, email };
         localStorage.setItem("data", JSON.stringify(data));
+        filteredData = [...data];
         renderTable();
       }
     }
 
     function deleteData(index) {
       if (confirm("Are you sure you want to delete this record?")) {
-        data.splice(index, 1);
+        const originalIndex = data.findIndex(item => item === filteredData[index]);
+        data.splice(originalIndex, 1);
         localStorage.setItem("data", JSON.stringify(data));
-        if ((currentPage - 1) * perPage >= data.length && currentPage > 1) {
+        filteredData = [...data];
+        if ((currentPage - 1) * perPage >= filteredData.length && currentPage > 1) {
           currentPage--;
         }
         renderTable();
       }
+    }
+
+    function searchData() {
+      const query = document.getElementById("search").value.toLowerCase();
+      filteredData = data.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.email.toLowerCase().includes(query)
+      );
+      currentPage = 1;
+      renderTable();
     }
 
     function logout() {
